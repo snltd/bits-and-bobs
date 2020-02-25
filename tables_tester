@@ -1,0 +1,88 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Times table tester. Asks random a x b questions (both ways round). If you
+# get the answer wrong, the question goes back on the stack TWICE. If you take
+# longer than MAX_TIME to answer, it goes back on the stack ONCE.
+
+require 'colorize'
+
+# TABLE_RANGE = (2..12).to_a
+TABLE_RANGE = [3, 4, 5, 8].freeze     # Which tables to test; b in a x b
+LOWER_LIMIT = 2                       # Lowest a in a x b
+UPPER_LIMIT = 12                      # Highest a in a x b
+MAX_TIME = 4
+
+def right_now
+  Process.clock_gettime(Process::CLOCK_MONOTONIC)
+end
+
+def get_answer(a, b, questions_left)
+  print "[#{questions_left} remaining] ", "#{a} x #{b}".bold.black + ' = '
+  input = STDIN.gets.chomp
+  return input.gsub(/[^\d]/, '').to_i unless input.empty?
+
+  get_answer(a, b, questions_left)
+end
+
+def pluralise(num)
+  ret = "#{num.to_s.bold} question"
+  ret += 's' unless num == 1
+  ret
+end
+
+def percent_right(answers)
+  ((answers[:given] - answers[:wrong].to_f) / answers[:given] * 100).round(2)
+end
+
+questions = TABLE_RANGE.map do |t|
+  (LOWER_LIMIT..UPPER_LIMIT).zip([t] * UPPER_LIMIT)
+end.flatten(1).uniq
+
+answers = { given: 0, right: 0, wrong: 0, too_long: 0 }
+streak = { current: 0, best: 0 }
+t_start = right_now
+
+[3, 2, 1].each do |n|
+  puts "#{n}..."
+  sleep 1
+end
+
+loop do
+  questions.shuffle!
+  a, b = questions.pop
+  answers[:given] += 1
+  t0 = right_now
+  answer = get_answer(a, b, questions.size + 1)
+  time_taken = right_now - t0
+
+  if answer != a * b
+    streak[:current] = 0
+    puts "\u274c             #{a} x #{b} = ".red + (a * b).to_s.red.bold
+    questions.<<([a, b])
+    questions.<<([a, b])
+    answers[:wrong] += 1
+  elsif time_taken > MAX_TIME
+    puts 'TOO SLOW'.blue
+    questions.<<([a, b])
+    answers[:too_long] += 1
+  else
+    streak[:current] += 1
+    puts "\u2714".green * streak[:current]
+  end
+
+  streak[:best] = streak[:current] if streak[:current] > streak[:best]
+
+  break if questions.empty?
+end
+
+total_time = (right_now - t_start).round(3)
+average_time = (answers[:given] / total_time).round(2)
+
+puts %(
+Well done, you completed all questions in #{total_time.to_s.bold} seconds.
+You got #{pluralise(answers[:wrong])} wrong out of #{answers[:given]}.
+That's a success rate of #{percent_right(answers).to_s.bold}%.
+You took too long to answer #{pluralise(answers[:too_long])}.
+Your average answer time was #{average_time.to_s.bold}s.
+You had a best streak of #{pluralise(streak[:best])}.)
