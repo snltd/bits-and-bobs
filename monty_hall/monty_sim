@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+stick, switch = 0, 0
+
+1000000.times do
+  winning_choice = %w[A B C].sample
+  initial_choice = %w[A B C].sample
+  doors_you_could_switch_to = %w[A B C] - [initial_choice]
+  doors_monty_could_open = %w[A B C] - [initial_choice, winning_choice]
+  door_monty_opens = doors_monty_could_open.sample
+  doors_you_could_switch_to.delete(door_monty_opens)
+  initial_choice == winning_choice ? stick += 1 : switch += 1
+end
+
+puts "stick: #{stick}"
+puts "switch: #{switch}"
+puts "You are #{(switch.to_f / stick).round(4)} times more likely to win by switching"

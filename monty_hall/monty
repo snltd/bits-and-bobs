@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+# here's where the car is
+#
+winning_choice = %w[A B C].sample
+
+# you pick a random door
+#
+initial_choice = %w[A B C].sample
+
+puts "You choose door #{initial_choice}"
+
+# You can't switch to the door you picked
+#
+doors_you_could_switch_to = %w[A B C] - [initial_choice]
+
+# Monty can only open a door which does not have the car behind it, and which
+# you did not pick.
+#
+doors_monty_could_open = %w[A B C] - [initial_choice, winning_choice]
+
+# Of the doors Monty could open, he picks one at random
+#
+door_monty_opens = doors_monty_could_open.sample
+
+puts "Monty opens door #{door_monty_opens}"
+
+# So now you can't switch to that door. That means
+
+doors_you_could_switch_to.delete(door_monty_opens)
+
+puts "You can stick with door #{initial_choice} or switch to " \
+     "door #{doors_you_could_switch_to[0]}"
+
+print "The car is behind door #{winning_choice}, so you win by "
+puts initial_choice == winning_choice ? 'STICKING' : 'SWITCHING'
