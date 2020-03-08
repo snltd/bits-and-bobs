@@ -1,28 +1,36 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Times table tester. Asks random a x b questions (both ways round). If you
+# Times table tester. Asks random a x b = c and c / a = b questions.  If you
 # get the answer wrong, the question goes back on the stack TWICE. If you take
 # longer than MAX_TIME to answer, it goes back on the stack ONCE.
 
 require 'colorize'
 
 # TABLE_RANGE = (2..12).to_a
-TABLE_RANGE = [3, 4, 5, 8].freeze     # Which tables to test; b in a x b
+TABLE_RANGE = [3, 4, 11].freeze # Which tables to test; b in a x b
 LOWER_LIMIT = 2                       # Lowest a in a x b
 UPPER_LIMIT = 12                      # Highest a in a x b
-MAX_TIME = 4
+MAX_TIME = 4                          # how long you get to answer
+M_SYM = "\u00d7"                      # Unicode multiplication symbol
+D_SYM = "\u00f7"                      # Unicode division symbol
 
 def right_now
   Process.clock_gettime(Process::CLOCK_MONOTONIC)
 end
 
-def get_answer(a, b, questions_left)
-  print "[#{questions_left} remaining] ", "#{a} x #{b}".bold.black + ' = '
+def ask(q_data, questions_left)
+  print "[#{questions_left} remaining] " +
+        format('%<q1>d %<symbol>s %<q2>d', q_data).bold.black + ' = '
   input = STDIN.gets.chomp
   return input.gsub(/[^\d]/, '').to_i unless input.empty?
 
-  get_answer(a, b, questions_left)
+  ask(q_data, questions_left)
+end
+
+def show_right_answer(q_data)
+  puts format("\u274c%14<q1>d %<symbol>s %<q2>d = ", q_data).red +
+       q_data[:answer].to_s.red.bold
 end
 
 def pluralise(num)
@@ -35,36 +43,45 @@ def percent_right(answers)
   ((answers[:given] - answers[:wrong].to_f) / answers[:given] * 100).round(2)
 end
 
-questions = TABLE_RANGE.map do |t|
-  (LOWER_LIMIT..UPPER_LIMIT).zip([t] * UPPER_LIMIT)
-end.flatten(1).uniq
+def products(range = TABLE_RANGE, lower = LOWER_LIMIT, upper = UPPER_LIMIT)
+  range.map { |t| (lower..upper).zip([t] * upper) }.flatten(1).uniq
+end
+
+def multiplications
+  products.map { |a, b| { symbol: M_SYM, q1: a, q2: b, answer: a * b } }
+end
+
+def divisions
+  products.map { |a, b| { symbol: D_SYM, q1: a * b, q2: a, answer: b } }
+end
+
+questions = multiplications + divisions
 
 answers = { given: 0, right: 0, wrong: 0, too_long: 0 }
 streak = { current: 0, best: 0 }
 t_start = right_now
 
-[3, 2, 1].each do |n|
-  puts "#{n}..."
-  sleep 1
-end
+puts "\nPress 'return' to start."
+STDIN.gets
 
 loop do
   questions.shuffle!
-  a, b = questions.pop
+  this_question = questions.pop
+
   answers[:given] += 1
   t0 = right_now
-  answer = get_answer(a, b, questions.size + 1)
+  answer = ask(this_question, questions.size + 1)
   time_taken = right_now - t0
 
-  if answer != a * b
+  if answer != this_question[:answer]
     streak[:current] = 0
-    puts "\u274c             #{a} x #{b} = ".red + (a * b).to_s.red.bold
-    questions.<<([a, b])
-    questions.<<([a, b])
+    show_right_answer(this_question)
+    questions.<< this_question
+    questions.<< this_question
     answers[:wrong] += 1
   elsif time_taken > MAX_TIME
     puts 'TOO SLOW'.blue
-    questions.<<([a, b])
+    questions.<< this_question
     answers[:too_long] += 1
   else
     streak[:current] += 1
