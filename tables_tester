@@ -8,7 +8,8 @@
 require 'colorize'
 
 # TABLE_RANGE = (2..12).to_a
-TABLE_RANGE = [3, 4, 11].freeze # Which tables to test; b in a x b
+HOW_MANY = 20                         # How many questions to ask
+TABLE_RANGE = [3, 4].freeze # Which tables to test; b in a x b
 LOWER_LIMIT = 2                       # Lowest a in a x b
 UPPER_LIMIT = 12                      # Highest a in a x b
 MAX_TIME = 4                          # how long you get to answer
@@ -48,14 +49,16 @@ def products(range = TABLE_RANGE, lower = LOWER_LIMIT, upper = UPPER_LIMIT)
 end
 
 def multiplications
-  products.map { |a, b| { symbol: M_SYM, q1: a, q2: b, answer: a * b } }
+  products.map { |a, b| { symbol: M_SYM, q1: a, q2: b, answer: a * b } } +
+  products.map { |a, b| { symbol: M_SYM, q1: b, q2: a, answer: a * b } }
 end
 
 def divisions
-  products.map { |a, b| { symbol: D_SYM, q1: a * b, q2: a, answer: b } }
+  products.map { |a, b| { symbol: D_SYM, q1: a * b, q2: a, answer: b } } +
+  products.map { |a, b| { symbol: D_SYM, q1: a * b, q2: b, answer: a } }
 end
 
-questions = multiplications + divisions
+questions = (multiplications + divisions).uniq.shuffle.take(HOW_MANY)
 
 answers = { given: 0, right: 0, wrong: 0, too_long: 0 }
 streak = { current: 0, best: 0 }
